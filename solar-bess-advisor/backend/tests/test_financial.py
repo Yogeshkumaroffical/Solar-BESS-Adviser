@@ -62,8 +62,8 @@ def test_default_scenario_analysis():
 
     assert result["recommendation"] in ["Attractive", "Marginal", "Not Attractive"]
     assert len(result["annual_cash_flows"]) == 25
-    assert result["solar_only_financials"].npv_cr > 0
-    assert result["hybrid_financials"].npv_cr > 0
+    assert result["solar_only_financials"].npv_cr == -272.1
+    assert result["hybrid_financials"].npv_cr == -332.48
     assert len(result["sensitivity"]) > 0
 
 

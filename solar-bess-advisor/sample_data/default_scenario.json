@@ -1,0 +1,39 @@
+{
+  "solar": {
+    "plant_capacity_mw": 500,
+    "cuf_percent": 22,
+    "ppa_tariff_inr": 2.5,
+    "clipping_loss_percent": 2.0,
+    "curtailment_percent": 1.0,
+    "dsm_penalty_percent": 1.5,
+    "solar_capex_cr": 1750,
+    "solar_om_cr_year": 8.75,
+    "solar_degradation_percent": 0.5,
+    "project_life_years": 25,
+    "wacc_percent": 10,
+    "tax_rate_percent": 25.17
+  },
+  "bess": {
+    "bess_capacity_mwh": 250,
+    "bess_power_mw": 100,
+    "bess_capex_cr": 150,
+    "bess_om_cr_year": 1.5,
+    "rte_percent": 88,
+    "battery_degradation_percent": 2.0,
+    "cycles_per_day": 1.0,
+    "replacement_year": null,
+    "replacement_cost_cr": null
+  },
+  "revenue": {
+    "off_peak_buy_tariff_inr": 0,
+    "peak_sell_tariff_inr": 3.3,
+    "curtailment_sell_tariff_inr": 3.3,
+    "clipping_sell_tariff_inr": 3.3,
+    "clipping_recovery_factor": 0.85,
+    "curtailment_recovery_factor": 0.80,
+    "ancillary_enabled": false,
+    "ancillary_rate_cr_mw_year": 0.5,
+    "ancillary_capacity_mw": 20,
+    "om_escalation_percent": 3.0
+  }
+}

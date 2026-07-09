@@ -19,6 +19,10 @@ from models.outputs import (
     SensitivityPoint,
     Warning,
 )
+from core.revenue import (
+    compute_solar_only_revenue,
+    compute_hybrid_revenue,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -70,94 +74,65 @@ def _compute_revenue_breakdown(
     # --- Generation ---
     annual_gen_mwh = s.plant_capacity_mw * (s.cuf_percent / 100) * 8760 * solar_degradation_factor
 
-    # --- Solar-only base revenue ---
-    base_ppa_revenue_cr = annual_gen_mwh * s.ppa_tariff_inr / 1e7  # INR → Crores
-
-    # DSM penalty (applies to solar-only; BESS reduces it)
-    raw_dsm_penalty_cr = base_ppa_revenue_cr * (s.dsm_penalty_percent / 100)
-    dsm_penalty_cr = -raw_dsm_penalty_cr  # stored as negative cost
-
     # O&M
     solar_om = s.solar_om_cr_year * om_escalation_factor
-    bess_om = b.bess_om_cr_year * om_escalation_factor if is_hybrid else 0.0
 
     if not is_hybrid:
-        total_om_cr = solar_om
-        total_revenue_cr = base_ppa_revenue_cr + dsm_penalty_cr
-        net_profit_cr = total_revenue_cr - total_om_cr
-        net_profit_after_tax_cr = net_profit_cr * (1 - inputs.solar.tax_rate_percent / 100)
-        return RevenueBreakdown(
-            base_ppa_revenue_cr=base_ppa_revenue_cr,
-            dsm_penalty_cr=dsm_penalty_cr,
-            dsm_savings_cr=0.0,
-            clipping_recovery_cr=0.0,
-            curtailment_recovery_cr=0.0,
-            arbitrage_cr=0.0,
-            peak_shift_cr=0.0,
-            ancillary_cr=0.0,
-            total_revenue_cr=total_revenue_cr,
-            total_om_cr=total_om_cr,
-            net_profit_cr=net_profit_cr,
-            net_profit_after_tax_cr=net_profit_after_tax_cr,
+        res = compute_solar_only_revenue(
+            generation_mwh=annual_gen_mwh,
+            ppa_tariff_inr=s.ppa_tariff_inr,
+            dsm_penalty_fraction=s.dsm_penalty_percent / 100,
+            om_cr=solar_om,
+            tax_rate_fraction=s.tax_rate_percent / 100,
+        )
+    else:
+        # We need solar_only_dsm_cr for hybrid DSM savings
+        solar_res = compute_solar_only_revenue(
+            generation_mwh=annual_gen_mwh,
+            ppa_tariff_inr=s.ppa_tariff_inr,
+            dsm_penalty_fraction=s.dsm_penalty_percent / 100,
+            om_cr=solar_om,
+            tax_rate_fraction=s.tax_rate_percent / 100,
+        )
+        bess_om = b.bess_om_cr_year * om_escalation_factor
+        
+        res = compute_hybrid_revenue(
+            generation_mwh=annual_gen_mwh,
+            ppa_tariff_inr=s.ppa_tariff_inr,
+            dsm_penalty_fraction=s.dsm_penalty_percent / 100,
+            solar_only_dsm_cr=solar_res.dsm_penalty_cr,
+            clipping_fraction=s.clipping_loss_percent / 100,
+            clipping_recovery_factor=r.clipping_recovery_factor,
+            clipping_sell_tariff_inr=r.clipping_sell_tariff_inr,
+            curtailment_fraction=s.curtailment_percent / 100,
+            curtailment_recovery_factor=r.curtailment_recovery_factor,
+            curtailment_sell_tariff_inr=r.curtailment_sell_tariff_inr,
+            bess_capacity_mwh=b.bess_capacity_mwh,
+            bess_degradation_factor=bess_degradation_factor,
+            cycles_per_day=b.cycles_per_day,
+            rte=b.rte_percent / 100,
+            off_peak_buy_tariff_inr=r.off_peak_buy_tariff_inr,
+            peak_sell_tariff_inr=r.peak_sell_tariff_inr,
+            ancillary_enabled=r.ancillary_enabled,
+            ancillary_capacity_mw=r.ancillary_capacity_mw,
+            ancillary_rate_cr_mw_year=r.ancillary_rate_cr_mw_year,
+            total_om_cr=solar_om + bess_om,
+            tax_rate_fraction=s.tax_rate_percent / 100,
         )
 
-    # --- Hybrid: BESS revenue streams ---
-
-    # 1. DSM savings: BESS improves schedule adherence → reduces DSM penalty
-    dsm_savings_cr = raw_dsm_penalty_cr * 0.70  # BESS reduces ~70% of DSM penalty
-    hybrid_dsm_penalty_cr = -(raw_dsm_penalty_cr - dsm_savings_cr)
-
-    # 2. Clipping recovery
-    clipping_mwh = annual_gen_mwh * (s.clipping_loss_percent / 100)
-    recoverable_clip_mwh = clipping_mwh * r.clipping_recovery_factor * bess_degradation_factor
-    clipping_recovery_cr = recoverable_clip_mwh * r.clipping_sell_tariff_inr / 1e7
-
-    # 3. Curtailment recovery
-    curtailment_mwh = annual_gen_mwh * (s.curtailment_percent / 100)
-    recoverable_curtailment_mwh = curtailment_mwh * r.curtailment_recovery_factor * bess_degradation_factor
-    curtailment_recovery_cr = recoverable_curtailment_mwh * r.curtailment_sell_tariff_inr / 1e7
-
-    # 4. Arbitrage: BESS charges during off-peak and discharges during peak
-    bess_eff_capacity_mwh = b.bess_capacity_mwh * bess_degradation_factor
-    daily_arbitrage_mwh = bess_eff_capacity_mwh * b.cycles_per_day * (r.rte_percent / 100)
-    annual_arbitrage_mwh = daily_arbitrage_mwh * 365
-    arbitrage_revenue_cr = annual_arbitrage_mwh * r.peak_sell_tariff_inr / 1e7
-    arbitrage_cost_cr = annual_arbitrage_mwh * r.off_peak_buy_tariff_inr / 1e7
-    arbitrage_cr = max(0.0, arbitrage_revenue_cr - arbitrage_cost_cr)
-
-    # 5. Peak shift (already captured in arbitrage above; separate field = 0 to avoid double-count)
-    peak_shift_cr = 0.0
-
-    # 6. Ancillary services
-    ancillary_cr = 0.0
-    if r.ancillary_enabled:
-        ancillary_cr = r.ancillary_rate_cr_mw_year * r.ancillary_capacity_mw
-
-    total_om_cr = solar_om + bess_om
-    total_revenue_cr = (
-        base_ppa_revenue_cr
-        + hybrid_dsm_penalty_cr
-        + clipping_recovery_cr
-        + curtailment_recovery_cr
-        + arbitrage_cr
-        + ancillary_cr
-    )
-    net_profit_cr = total_revenue_cr - total_om_cr
-    net_profit_after_tax_cr = net_profit_cr * (1 - inputs.solar.tax_rate_percent / 100)
-
     return RevenueBreakdown(
-        base_ppa_revenue_cr=base_ppa_revenue_cr,
-        dsm_penalty_cr=hybrid_dsm_penalty_cr,
-        dsm_savings_cr=dsm_savings_cr,
-        clipping_recovery_cr=clipping_recovery_cr,
-        curtailment_recovery_cr=curtailment_recovery_cr,
-        arbitrage_cr=arbitrage_cr,
-        peak_shift_cr=peak_shift_cr,
-        ancillary_cr=ancillary_cr,
-        total_revenue_cr=total_revenue_cr,
-        total_om_cr=total_om_cr,
-        net_profit_cr=net_profit_cr,
-        net_profit_after_tax_cr=net_profit_after_tax_cr,
+        base_ppa_revenue_cr=res.base_ppa_revenue_cr,
+        dsm_penalty_cr=-res.dsm_penalty_cr,  # negative cost
+        dsm_savings_cr=res.dsm_savings_cr,
+        clipping_recovery_cr=res.clipping_recovery_cr,
+        curtailment_recovery_cr=res.curtailment_recovery_cr,
+        arbitrage_cr=res.arbitrage_cr,
+        peak_shift_cr=res.peak_shift_cr,
+        ancillary_cr=res.ancillary_cr,
+        total_revenue_cr=res.total_revenue_cr,
+        total_om_cr=res.total_om_cr,
+        net_profit_cr=res.net_profit_cr,
+        net_profit_after_tax_cr=res.net_profit_after_tax_cr,
     )
 
 
@@ -165,7 +140,7 @@ def _compute_revenue_breakdown(
 # Full financial model
 # ---------------------------------------------------------------------------
 
-def run_analysis(inputs: ProjectInputs) -> dict:
+def run_analysis(inputs: ProjectInputs, compute_sensitivity: bool = True) -> dict:
     """Run full financial analysis. Returns a dict ready to build AnalysisResult."""
     s = inputs.solar
     b = inputs.bess
@@ -275,12 +250,12 @@ def run_analysis(inputs: ProjectInputs) -> dict:
     solar_only_lcoe = (s.solar_capex_cr * 1e7 + sum(
         s.solar_om_cr_year * (1 + r.om_escalation_percent / 100) ** yr * 1e7 / (1 + wacc) ** (yr + 1)
         for yr in range(years)
-    )) / pv_gen if pv_gen > 0 else None
+    )) / (pv_gen * 1000) if pv_gen > 0 else None
 
     hybrid_lcoe = ((s.solar_capex_cr + b.bess_capex_cr) * 1e7 + sum(
         (s.solar_om_cr_year + b.bess_om_cr_year) * (1 + r.om_escalation_percent / 100) ** yr * 1e7 / (1 + wacc) ** (yr + 1)
         for yr in range(years)
-    )) / pv_gen if pv_gen > 0 else None
+    )) / (pv_gen * 1000) if pv_gen > 0 else None
 
     solar_financials = FinancialSummary(
         npv_cr=round(solar_npv, 2),
@@ -344,7 +319,9 @@ def run_analysis(inputs: ProjectInputs) -> dict:
         )
 
     # --- Sensitivity analysis ---
-    sensitivity = _compute_sensitivity(inputs, solar_npv, hybrid_npv)
+    sensitivity = []
+    if compute_sensitivity:
+        sensitivity = _compute_sensitivity(inputs, solar_npv, hybrid_npv)
 
     return dict(
         inputs_summary=inputs.model_dump(),
@@ -389,7 +366,7 @@ def _compute_sensitivity(inputs: ProjectInputs, base_solar_npv: float, base_hybr
             new_val = base_val * (1 + delta / 100)
             setattr(section_obj, field, new_val)
             try:
-                res = run_analysis(inp_copy)
+                res = run_analysis(inp_copy, compute_sensitivity=False)
                 s_npv = res["solar_only_financials"].npv_cr
                 h_npv = res["hybrid_financials"].npv_cr
             except Exception:

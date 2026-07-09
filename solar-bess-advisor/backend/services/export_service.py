@@ -226,8 +226,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 
 def generate_pdf(result: AnalysisResult, project_name: str = "Solar BESS Project") -> bytes:
-    from weasyprint import HTML as WeasyHTML
-    
+    try:
+        from weasyprint import HTML as WeasyHTML
+    except ImportError:
+        # WeasyPrint requires system GTK/Cairo libraries.
+        # Fall back to a simple HTML-as-PDF approach or raise a clear error.
+        raise RuntimeError(
+            "PDF export requires WeasyPrint which needs GTK/Cairo system libraries. "
+            "Install WeasyPrint (pip install weasyprint) and its system dependencies, "
+            "or use the Excel export instead."
+        )
+
     s = result.solar_only_financials
     h = result.hybrid_financials
     so = result.solar_only_year1
@@ -278,3 +287,4 @@ def generate_pdf(result: AnalysisResult, project_name: str = "Solar BESS Project
 
     pdf_bytes = WeasyHTML(string=html_content).write_pdf()
     return pdf_bytes
+

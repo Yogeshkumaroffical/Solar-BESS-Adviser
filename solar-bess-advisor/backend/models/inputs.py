@@ -78,7 +78,7 @@ class BESSInputs(BaseModel):
         2.0, ge=0, le=10, description="Annual battery capacity degradation (%)"
     )
     cycles_per_day: float = Field(
-        1.0, ge=0.1, le=3, description="Battery cycles per day"
+        1.0, ge=0.0, le=3, description="Battery cycles per day"
     )
     replacement_year: Optional[int] = Field(
         None, ge=1, le=39, description="Year for battery replacement (optional)"

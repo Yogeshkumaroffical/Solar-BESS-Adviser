@@ -16,9 +16,9 @@ from routers.health import router as health_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🌞 Solar BESS Advisor API starting…")
+    print("Solar BESS Advisor API starting...")
     yield
-    print("🌙 Solar BESS Advisor API shutting down.")
+    print("Solar BESS Advisor API shutting down.")
 
 
 app = FastAPI(
