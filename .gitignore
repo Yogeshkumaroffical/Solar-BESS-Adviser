@@ -25,3 +25,14 @@ build/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.env
+secrets/
+credentials.json
+*.pem
+*.key
+.vscode/*.local.json
+

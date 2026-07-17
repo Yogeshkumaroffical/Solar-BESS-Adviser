@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "./solar-bess-advisor/backend"
+  ],
+  "python.autoComplete.extraPaths": [
+    "./solar-bess-advisor/backend"
+  ]
+}

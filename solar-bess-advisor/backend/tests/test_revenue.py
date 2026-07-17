@@ -2,7 +2,13 @@
 Unit tests for the core revenue calculation functions.
 """
 
+import os
+import sys
 import pytest
+
+# Add backend directory to sys.path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from core.revenue import (
     inr_kwh_x_mwh_to_cr,
     compute_annual_generation_mwh,

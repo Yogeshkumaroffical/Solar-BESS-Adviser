@@ -2,7 +2,13 @@
 Unit tests for the financial engine calculations of Solar BESS Profitability Advisor.
 """
 
+import os
+import sys
 import pytest
+
+# Add backend directory to sys.path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from services.financial_engine import _irr, run_analysis
 from models.inputs import ProjectInputs, SolarInputs, BESSInputs, RevenueInputs
 

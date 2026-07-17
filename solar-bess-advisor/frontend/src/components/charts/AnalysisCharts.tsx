@@ -151,9 +151,11 @@ export function CashFlowChart() {
 
   // Year 0 details
   const yearsWithYr0 = ['Yr 0', ...years];
-  const solarCumWithYr0 = [-result.inputs_summary.solar.solar_capex_cr, ...solarCumulative];
+  const solarSummary = result.inputs_summary.solar as { solar_capex_cr: number };
+  const bessSummary = result.inputs_summary.bess as { bess_capex_cr: number };
+  const solarCumWithYr0 = [-solarSummary.solar_capex_cr, ...solarCumulative];
   const hybridCumWithYr0 = [
-    -(result.inputs_summary.solar.solar_capex_cr + result.inputs_summary.bess.bess_capex_cr),
+    -(solarSummary.solar_capex_cr + bessSummary.bess_capex_cr),
     ...hybridCumulative,
   ];
 
@@ -189,11 +191,11 @@ export function CashFlowChart() {
           height: 360,
           xaxis: {
             ...THEME_LAYOUT.xaxis,
-            title: 'Project Years',
+            title: { text: 'Project Years' },
           },
           yaxis: {
             ...THEME_LAYOUT.yaxis,
-            title: 'INR Crores',
+            title: { text: 'INR Crores' },
           },
         }}
         config={{ displayModeBar: false, responsive: true }}
@@ -277,7 +279,7 @@ export function SensitivityChart() {
             height: 380,
             xaxis: {
               ...THEME_LAYOUT.xaxis,
-              title: 'NPV Gain (INR Crores)',
+              title: { text: 'NPV Gain (INR Crores)' },
             },
             yaxis: {
               ...THEME_LAYOUT.yaxis,

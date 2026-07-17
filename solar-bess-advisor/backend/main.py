@@ -4,7 +4,11 @@ Solar BESS Profitability Advisor – FastAPI application entry point.
 
 from __future__ import annotations
 import os
+import sys
 from contextlib import asynccontextmanager
+
+# Add backend directory to sys.path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
