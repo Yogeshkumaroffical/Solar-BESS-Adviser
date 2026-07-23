@@ -1,0 +1,16 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\dell\\Documents\\Solar BESS Adviser\\solar-bess-advisor\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [8240] using WatchFiles
+INFO:     Started server process [8508]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Solar BESS Advisor API starting...
+INFO:     127.0.0.1:51249 - "HEAD / HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:51249 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51261 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56291 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60977 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62514 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59112 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57448 - "POST /api/advisory HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63197 - "POST /api/analyze HTTP/1.1" 200 OK

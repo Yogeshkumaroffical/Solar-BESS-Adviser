@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "solar-bess-advisor/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "solar-bess-advisor/backend/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "solar-bess-advisor/backend/main.py"
+    },
+    {
+      "src": "/health",
+      "dest": "solar-bess-advisor/backend/main.py"
+    },
+    {
+      "src": "/docs",
+      "dest": "solar-bess-advisor/backend/main.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "solar-bess-advisor/backend/main.py"
+    },
+    {
+      "src": "/redoc",
+      "dest": "solar-bess-advisor/backend/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "solar-bess-advisor/frontend/dist/$1"
+    }
+  ]
+}
